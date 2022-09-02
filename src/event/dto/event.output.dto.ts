@@ -1,15 +1,18 @@
+import { EVENT_CERTIFICATE } from '../enum/event-certificate.enum';
+import { EVENT_STATUS } from '../enum/event-status.enum';
+import { EventDistanceDto } from './event-distance.dto';
+
 export class EventOutputDto {
   eventName: string;
-  eventInfo: string;
+  eventInfo: string | null;
   eventLink: string | null;
-  eventStatus: boolean;
-  eventCertificate: number | null;
+  eventStatus: EVENT_STATUS;
+  eventCertificate: EVENT_CERTIFICATE | null;
   eventDate: string;
   eventTime: string | null;
   location: string | null;
-  distances: object;
-  agent: string | null;
-  participate: string;
+  distances: EventDistanceDto[];
+  agent: string;
   entryIsEnd: boolean;
   entryStartDate: string | null;
   entryEndDate: string | null;

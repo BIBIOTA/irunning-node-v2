@@ -1,13 +1,27 @@
-import { Injectable } from '@nestjs/common';
 import * as cheerio from 'cheerio';
 import * as moment from 'moment';
 import { EventOutputDto } from './dto/event.output.dto';
 import { AxiosResponse } from 'axios';
 import { HttpService } from '@nestjs/axios';
+import { EVENT_STATUS } from './enum/event-status.enum';
+import { EVENT_CERTIFICATE } from './enum/event-certificate.enum';
+import { EventDistanceDto } from './dto/event-distance.dto';
+import { HttpStatus, Injectable, Logger } from '@nestjs/common';
+import { Cron } from '@nestjs/schedule';
+import { Model } from 'mongoose';
+import * as mongoose from 'mongoose';
+import { InjectModel, InjectConnection } from '@nestjs/mongoose';
+import { Event, EventDocument } from './event.model';
 
 @Injectable()
 export class EventService {
-  constructor(private readonly httpService: HttpService) {}
+  private readonly logger = new Logger(EventService.name);
+
+  constructor(
+    @InjectModel(Event.name) private eventModel: Model<EventDocument>,
+    @InjectConnection() private readonly connection: mongoose.Connection,
+    private readonly httpService: HttpService,
+  ) {}
 
   getEventsBodyFromOrg(): Promise<AxiosResponse> {
     return this.httpService.axiosRef.get(
@@ -16,7 +30,7 @@ export class EventService {
   }
 
   crawlerEvents(body: string): EventOutputDto[] {
-    const result = [];
+    const result: EventOutputDto[] = [];
     const $ = cheerio.load(body);
     const tr = $('table.gridview tr');
 
@@ -39,6 +53,37 @@ export class EventService {
     return result;
   }
 
+  async getEvents(): Promise<EventOutputDto[]> {
+    return await this.eventModel.find().select(['-_id', '-__v']).exec();
+  }
+
+  @Cron('* 3,15 * * *', {
+    name: 'update events',
+    timeZone: 'Asia/Taipei',
+  })
+  async updateEvents(): Promise<EventOutputDto[]> {
+    this.logger.log('Start update events');
+    const transactionSession = await this.connection.startSession();
+    transactionSession.startTransaction();
+    const fetchResult = await this.getEventsBodyFromOrg();
+    if (fetchResult.status === HttpStatus.OK) {
+      try {
+        this.eventModel.deleteMany({}).exec();
+        const eventOutputDto = this.crawlerEvents(fetchResult.data);
+        eventOutputDto.map((event) => {
+          new this.eventModel(event).save();
+        });
+        this.logger.log('Update events end');
+        return eventOutputDto;
+      } catch (error) {
+        throw this.logger.error('Error when update events', error);
+      } finally {
+        transactionSession.endSession();
+      }
+    }
+    throw this.logger.error('Error when update events. API Request Error');
+  }
+
   private transformEvent(td: cheerio.Cheerio, year: string): EventOutputDto {
     const title = this.getTitle(td);
     const [date, time] = this.getDateTime(td);
@@ -58,7 +103,6 @@ export class EventService {
       location: this.getLocation(td),
       distances: this.getDistances(td),
       agent: this.getAgent(td),
-      participate: this.getPaticipate(entryStartDate, endtryEndDate),
       entryIsEnd: this.checkEntryIsEnd(entry),
       entryStartDate: entryStartDate,
       entryEndDate: endtryEndDate,
@@ -84,28 +128,30 @@ export class EventService {
 
   private getEventTime(time: string | null): string | null {
     if (time) {
-      return moment(time, 'HH:mm').format('HH:mm:ss');
+      return time;
     }
 
     return null;
   }
 
-  private getEventStatus(td: cheerio.Cheerio): boolean {
-    return td.eq(1).css('text-decoration') === 'line-through' ? false : true;
+  private getEventStatus(td: cheerio.Cheerio): EVENT_STATUS {
+    return td.eq(1).css('text-decoration') === 'line-through'
+      ? EVENT_STATUS.CANCELED_OR_POSTPONE
+      : EVENT_STATUS.NORMAL;
   }
 
-  private getEventCertificate(td: cheerio.Cheerio): number | null {
+  private getEventCertificate(td: cheerio.Cheerio): EVENT_CERTIFICATE | null {
     const certificate = td.eq(2).find('img').attr('src');
-    let eventCertificate;
+    let eventCertificate: EVENT_CERTIFICATE | null;
     switch (certificate) {
       case '/images/iaaf.gif':
-        eventCertificate = 1;
+        eventCertificate = EVENT_CERTIFICATE.IAAF;
         break;
       case '/images/aims_logo.gif':
-        eventCertificate = 2;
+        eventCertificate = EVENT_CERTIFICATE.AIMS;
         break;
       case '/images/course_ok.png':
-        eventCertificate = 3;
+        eventCertificate = EVENT_CERTIFICATE.COURSE_CACULATED;
         break;
       default:
         eventCertificate = null;
@@ -131,14 +177,14 @@ export class EventService {
     return td.eq(4).text() ?? null;
   }
 
-  private getDistances(td: cheerio.Cheerio): Array<object> {
+  private getDistances(td: cheerio.Cheerio): EventDistanceDto[] {
     const distancesElement = td.eq(5).find('button');
-    const distances = [];
+    const distances: EventDistanceDto[] = [];
     if (distancesElement.length > 0) {
       for (let i = 0; i <= distancesElement.length - 1; i++) {
         const data = distancesElement.eq(i).html();
         let distance = null;
-        let eventDistance = null;
+        let complexDistance = null;
         if (
           !data.includes('+') &&
           data.includes('K') &&
@@ -146,17 +192,16 @@ export class EventService {
         ) {
           distance = parseFloat(data.replace('K', ''));
         } else {
-          eventDistance = data;
+          complexDistance = data;
         }
         const distanceInfo = distancesElement.eq(i).attr('title').split('：');
-        const eventPrice =
-          parseInt(distanceInfo[1].split('<br/>')[0].trim()) ?? null;
-        const eventLimit = parseInt(distanceInfo[2]) ?? null;
+        const eventPrice = parseInt(distanceInfo[1].split('<br/>')[0].trim());
+        const eventLimit = parseInt(distanceInfo[2]);
         distances.push({
           distance,
-          eventDistance,
-          eventPrice: eventPrice,
-          eventLimit: eventLimit,
+          complexDistance,
+          eventPrice: isNaN(eventPrice) ? null : eventPrice,
+          eventLimit: isNaN(eventLimit) ? null : eventLimit,
         });
       }
     }
@@ -168,24 +213,6 @@ export class EventService {
     return td.eq(6).text();
   }
 
-  private getPaticipate(entryStart: string, endtryEnd: string): string | null {
-    if (entryStart && endtryEnd) {
-      const start = entryStart ? moment(entryStart).format('M/DD') : '';
-      const end = endtryEnd ? moment(endtryEnd).format('M/DD') : '';
-      let entryLastDayCount = null;
-      if (end) {
-        entryLastDayCount =
-          moment(endtryEnd).diff(moment(Date.now()), 'days') + 1;
-      }
-      let lastDayStr = '';
-      if (entryLastDayCount !== null && entryLastDayCount <= 7) {
-        lastDayStr = ` (最後${entryLastDayCount}天)`;
-      }
-      return start + '~' + end + lastDayStr;
-    }
-    return null;
-  }
-
   private getEntry(td: cheerio.Cheerio): string {
     return td.eq(7).text().trim().replace(/\s/g, '');
   }
@@ -193,7 +220,7 @@ export class EventService {
   private getEntryStartAndEnd(
     year: string,
     entry: string | null,
-  ): Array<string> | null {
+  ): Array<string | null> {
     if (entry === '已截止') {
       return [null, null];
     }
@@ -234,20 +261,24 @@ export class EventService {
   }
 
   private getEventName(title: string): string {
-    const brackets = this.getBrackets(title);
-    return title.substring(0, title.indexOf(brackets.first));
+    const { first, last } = this.getBrackets(title);
+    if (first === null && last === null) {
+      return title;
+    }
+    return title.substring(0, title.indexOf(first));
   }
 
-  private getEventInfo(title: string): string {
-    const brackets = this.getBrackets(title);
+  private getEventInfo(title: string): string | null {
+    const { first, last } = this.getBrackets(title);
 
-    return title.substring(
-      title.indexOf(brackets.first) + 1,
-      title.indexOf(brackets.last),
-    );
+    if (first === null && last === null) {
+      return null;
+    }
+
+    return title.substring(title.indexOf(first) + 1, title.indexOf(last));
   }
 
-  private getDate(year: string, date: string) {
+  private getDate(year: string, date: string): string {
     return moment(new Date(`${year}/${date}`)).format('YYYY-MM-DD');
   }
 

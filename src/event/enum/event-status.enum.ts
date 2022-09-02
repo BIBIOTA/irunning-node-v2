@@ -1,0 +1,4 @@
+export enum EVENT_STATUS {
+  CANCELED_OR_POSTPONE = 0,
+  NORMAL = 1,
+}

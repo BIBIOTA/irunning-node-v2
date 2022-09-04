@@ -36,7 +36,7 @@ export class Event {
   distances: EventDistanceDto[];
 
   @Prop()
-  agent: string;
+  agent: string | null;
 
   @Prop()
   entryIsEnd: boolean;

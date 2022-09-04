@@ -12,7 +12,7 @@ export class EventOutputDto {
   eventTime: string | null;
   location: string | null;
   distances: EventDistanceDto[];
-  agent: string;
+  agent: string | null;
   entryIsEnd: boolean;
   entryStartDate: string | null;
   entryEndDate: string | null;

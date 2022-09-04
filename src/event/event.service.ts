@@ -9,17 +9,15 @@ import { EventDistanceDto } from './dto/event-distance.dto';
 import { HttpStatus, Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { Model } from 'mongoose';
-import * as mongoose from 'mongoose';
-import { InjectModel, InjectConnection } from '@nestjs/mongoose';
+import { InjectModel } from '@nestjs/mongoose';
 import { Event, EventDocument } from './event.model';
-
+import { EVENT_MESSEAGE } from './enum/error-message.enum';
 @Injectable()
 export class EventService {
   private readonly logger = new Logger(EventService.name);
 
   constructor(
     @InjectModel(Event.name) private eventModel: Model<EventDocument>,
-    @InjectConnection() private readonly connection: mongoose.Connection,
     private readonly httpService: HttpService,
   ) {}
 
@@ -61,27 +59,42 @@ export class EventService {
     name: 'update events',
     timeZone: 'Asia/Taipei',
   })
-  async updateEvents(): Promise<EventOutputDto[]> {
+  async updateEvents(): Promise<void> {
     this.logger.log('Start update events');
-    const transactionSession = await this.connection.startSession();
-    transactionSession.startTransaction();
     const fetchResult = await this.getEventsBodyFromOrg();
     if (fetchResult.status === HttpStatus.OK) {
       try {
         this.eventModel.deleteMany({}).exec();
-        const eventOutputDto = this.crawlerEvents(fetchResult.data);
-        eventOutputDto.map((event) => {
+        const eventOutputDtos = this.crawlerEvents(fetchResult.data);
+        eventOutputDtos.map((event) => {
           new this.eventModel(event).save();
         });
         this.logger.log('Update events end');
-        return eventOutputDto;
+        return;
       } catch (error) {
-        throw this.logger.error('Error when update events', error);
-      } finally {
-        transactionSession.endSession();
+        this.logger.error(EVENT_MESSEAGE.ERROR_UPDATE_EVENT, error);
+        throw EVENT_MESSEAGE.ERROR_UPDATE_EVENT;
       }
     }
-    throw this.logger.error('Error when update events. API Request Error');
+    this.logger.error(EVENT_MESSEAGE.ERROR_UPDATE_EVENT_API_REQUEST);
+    throw EVENT_MESSEAGE.ERROR_UPDATE_EVENT_API_REQUEST;
+  }
+
+  async getHtmlSnapshot(): Promise<any> {
+    const fetchResult = await this.getEventsBodyFromOrg();
+    if (fetchResult.status === HttpStatus.OK) {
+      const $ = cheerio.load(fetchResult.data);
+      return $('*').html();
+    }
+    throw this.logger.error('Error when get events. API Request Error');
+  }
+
+  async getJsonSnapshot(): Promise<any> {
+    const fetchResult = await this.getEventsBodyFromOrg();
+    if (fetchResult.status === HttpStatus.OK) {
+      return this.crawlerEvents(fetchResult.data);
+    }
+    throw this.logger.error('Error when get events. API Request Error');
   }
 
   private transformEvent(td: cheerio.Cheerio, year: string): EventOutputDto {
@@ -174,7 +187,8 @@ export class EventService {
     return td.eq(0).find('span').text() ?? null;
   }
   private getLocation(td: cheerio.Cheerio): string | null {
-    return td.eq(4).text() ?? null;
+    const location = td.eq(4).text().trim();
+    return location != '' ? location : null;
   }
 
   private getDistances(td: cheerio.Cheerio): EventDistanceDto[] {
@@ -209,8 +223,9 @@ export class EventService {
     return distances;
   }
 
-  private getAgent(td: cheerio.Cheerio): string {
-    return td.eq(6).text();
+  private getAgent(td: cheerio.Cheerio): string | null {
+    const agent = td.eq(6).text().trim();
+    return agent != '' ? agent : null;
   }
 
   private getEntry(td: cheerio.Cheerio): string {

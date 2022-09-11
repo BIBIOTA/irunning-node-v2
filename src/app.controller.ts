@@ -1,5 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
-import { ApiOkResponse, ApiProperty } from '@nestjs/swagger';
+import { ApiOkResponse } from '@nestjs/swagger';
 import { AppService } from './app.service';
 
 @Controller()

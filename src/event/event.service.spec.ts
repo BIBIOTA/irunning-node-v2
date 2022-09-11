@@ -6,7 +6,7 @@ import { Event } from './event.model';
 import * as fs from 'fs';
 import { join } from 'path';
 import { EventOutputDto } from './dto/event.output.dto';
-import { response } from 'src/interfaces/response-interface';
+import { EventResponseDto } from './dto/response-output.dto';
 
 describe('EventService', () => {
   let service: EventService;
@@ -3622,8 +3622,7 @@ describe('EventService', () => {
       join(process.cwd(), './test/mock-files/expect-events-result.json'),
     )
     .toString();
-  const mockJsonResponse: response<EventOutputDto[]> =
-    JSON.parse(expectResponse);
+  const mockJsonResponse: EventResponseDto = JSON.parse(expectResponse);
 
   const mockData = {
     eventName: '2022 臺灣米倉田中馬拉松',

@@ -8,7 +8,7 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('Taiwan Marathons API')
     .setDescription('台灣路跑賽事 API')
-    .setVersion('1.0')
+    .setVersion('1.1')
     .build();
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api', app, document);

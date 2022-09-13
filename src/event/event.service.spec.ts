@@ -7,6 +7,7 @@ import * as fs from 'fs';
 import { join } from 'path';
 import { EventOutputDto } from './dto/event.output.dto';
 import { EventResponseDto } from './dto/response-output.dto';
+import { EventInputDto } from './dto/event.input.dto';
 
 describe('EventService', () => {
   let service: EventService;
@@ -3666,7 +3667,11 @@ describe('EventService', () => {
       return {
         select: jest.fn().mockImplementation(() => {
           return {
-            exec: jest.fn().mockResolvedValue([mockData]),
+            sort: jest.fn().mockImplementation(() => {
+              return {
+                exec: jest.fn().mockResolvedValue([mockData]),
+              };
+            }),
           };
         }),
       };
@@ -3726,7 +3731,8 @@ describe('EventService', () => {
   });
 
   it('testGetEvents', async () => {
-    expect(await service.getEvents()).toEqual([mockData]);
+    const eventInputDto: EventInputDto = {};
+    expect(await service.getEvents(eventInputDto)).toEqual([mockData]);
   });
 
   it('testUpdateEvents', async () => {

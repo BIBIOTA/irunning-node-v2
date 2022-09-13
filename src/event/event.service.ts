@@ -1,5 +1,6 @@
 import * as cheerio from 'cheerio';
 import * as moment from 'moment';
+import * as _ from 'lodash';
 import { EventOutputDto } from './dto/event.output.dto';
 import { AxiosResponse } from 'axios';
 import { HttpService } from '@nestjs/axios';
@@ -12,6 +13,8 @@ import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { Event, EventDocument } from './event.model';
 import { EVENT_MESSEAGE } from './enum/error-message.enum';
+import { EventInputDto } from './dto/event.input.dto';
+import { EVENT_DISTANCES_TYPE } from './enum/event-distances-type.enum';
 @Injectable()
 export class EventService {
   private readonly logger = new Logger(EventService.name);
@@ -51,8 +54,19 @@ export class EventService {
     return result;
   }
 
-  async getEvents(): Promise<EventOutputDto[]> {
-    return await this.eventModel.find().select(['-_id', '-__v']).exec();
+  async getEvents(eventInputDto: EventInputDto): Promise<EventOutputDto[]> {
+    const { keywords, dateRange, distances } = eventInputDto;
+
+    let searchQuery = {};
+    searchQuery = this.setKeywordsQuery(searchQuery, keywords);
+    searchQuery = this.setEventDateRangeQuery(searchQuery, dateRange);
+    searchQuery = this.setDistancesQuery(searchQuery, distances);
+
+    return await this.eventModel
+      .find(searchQuery)
+      .select(['-_id', '-__v'])
+      .sort({ eventDate: 1 })
+      .exec();
   }
 
   @Cron('* 3,15 * * *', {
@@ -95,6 +109,71 @@ export class EventService {
       return this.crawlerEvents(fetchResult.data);
     }
     throw this.logger.error('Error when get events. API Request Error');
+  }
+
+  private setKeywordsQuery(
+    searchQuery: object,
+    keywords: string | null,
+  ): object {
+    if (keywords) {
+      _.set(searchQuery, '$or', [
+        {
+          eventName: { $regex: '.*' + keywords + '.*' },
+        },
+        {
+          location: { $regex: '.*' + keywords + '.*' },
+        },
+      ]);
+    }
+
+    return searchQuery;
+  }
+
+  private setEventDateRangeQuery(
+    searchQuery: object,
+    dateRange: string[] | null,
+  ): object {
+    if (dateRange && dateRange.length > 0) {
+      const [startDate, endDate] = dateRange;
+      _.set(searchQuery, 'eventDate', {
+        $gte: startDate,
+      });
+      if (endDate) {
+        _.set(searchQuery, 'eventDate.$lte', endDate);
+      }
+    }
+
+    return searchQuery;
+  }
+
+  private setDistancesQuery(
+    searchQuery: object,
+    distances: EVENT_DISTANCES_TYPE[] | null,
+  ): object {
+    if (distances && distances.length > 0) {
+      const distancesQuery = [];
+      distances.forEach((distance: EVENT_DISTANCES_TYPE) => {
+        let query = {};
+        if (distance === EVENT_DISTANCES_TYPE.MARATHON) {
+          query = { $gte: 42, $lt: 43 };
+        }
+        if (distance === EVENT_DISTANCES_TYPE.HALF_MARATHON) {
+          query = { $gte: 21, $lt: 22 };
+        }
+        if (distance === EVENT_DISTANCES_TYPE.TEN_K) {
+          query = 10;
+        }
+        distancesQuery.push({
+          distances: {
+            $elemMatch: {
+              distance: query,
+            },
+          },
+        });
+      });
+      _.set(searchQuery, '$and', distancesQuery);
+    }
+    return searchQuery;
   }
 
   private transformEvent(td: cheerio.Cheerio, year: string): EventOutputDto {

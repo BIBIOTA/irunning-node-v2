@@ -1,4 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
+import { EventInputDto } from './dto/event.input.dto';
 import { EventOutputDto } from './dto/event.output.dto';
 import { EventController } from './event.controller';
 import { EventService } from './event.service';
@@ -3687,11 +3688,14 @@ describe('EventController', () => {
       message: 'ok',
       data: [mockData],
     };
+    const request: EventInputDto = {};
     const response = {
       json: jest.fn().mockResolvedValue(expectResponse),
       status: jest.fn().mockReturnThis(),
     };
-    expect(await controller.getEvents(response)).toEqual(expectResponse);
+    expect(await controller.getEvents(request, response)).toEqual(
+      expectResponse,
+    );
   });
 
   it('testGetHtmlSnapshot', async () => {

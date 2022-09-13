@@ -18,6 +18,15 @@ export class InternalServerErrorResponseDto {
   message: string;
 }
 
+export class BadRequestResponseDto {
+  @ApiProperty({ example: 400 })
+  statusCode: number;
+  @ApiProperty({ example: ['date must be formatted as yyyy-mm-dd'] })
+  message: string[];
+  @ApiProperty({ example: 'Bad Request' })
+  error: string;
+}
+
 export class InvalidTokenResponseDto {
   @ApiProperty({ example: 401 })
   statusCode: number;

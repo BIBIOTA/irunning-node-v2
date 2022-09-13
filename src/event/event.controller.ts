@@ -10,17 +10,20 @@ import {
 } from '@nestjs/common';
 import { EventService } from './event.service';
 import {
+  ApiBadRequestResponse,
   ApiInternalServerErrorResponse,
   ApiOkResponse,
   ApiResponse,
 } from '@nestjs/swagger';
 import * as _ from 'lodash';
 import {
+  BadRequestResponseDto,
   EventResponseDto,
   InternalServerErrorResponseDto,
   InvalidTokenResponseDto,
 } from './dto/response-output.dto';
 import { ResponseDto } from '../dto/response-dto';
+import { EventInputDto } from './dto/event.input.dto';
 @Controller('events')
 export class EventController {
   constructor(private eventService: EventService) {}
@@ -30,12 +33,19 @@ export class EventController {
     description: '取得所有賽事',
     type: EventResponseDto,
   })
+  @ApiBadRequestResponse({
+    description: 'Bad Request',
+    type: BadRequestResponseDto,
+  })
   @ApiInternalServerErrorResponse({
     description: 'Internal Server Error',
     type: InternalServerErrorResponseDto,
   })
-  async getEvents(@Response() res): Promise<EventResponseDto> {
-    const data = await this.eventService.getEvents();
+  async getEvents(
+    @Query() eventInputDto: EventInputDto,
+    @Response() res,
+  ): Promise<EventResponseDto> {
+    const data = await this.eventService.getEvents(eventInputDto);
     return res.status(HttpStatus.OK).json({
       statusCode: 0,
       message: 'ok',

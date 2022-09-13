@@ -26,9 +26,8 @@ export class EventInputDto {
   @ApiProperty({
     required: false,
     description:
-      "可查詢包含一項或多項特定距離的賽事(array of string)。 - 'MARATHON': 查詢distance >= 42 and < 43 的賽事, 'HALF_MARATHON': 查詢distance > 21 and <= 22的賽事, 'TEN_K': 查詢distance === 10的賽事 (賽事距離單位為km)",
+      '可查詢包含一項或多項特定距離的賽事(array of string)。 - MARATHON: 查詢distance >= 42 and < 43 的賽事, HALF_MARATHON: 查詢distance > 21 and <= 22的賽事, TEN_K: 查詢distance === 10的賽事 (賽事距離單位為km)',
     type: [EVENT_DISTANCES_TYPE],
-    enum: EVENT_DISTANCES_TYPE,
   })
   @IsOptional()
   @IsArray()

@@ -55,17 +55,29 @@ export class EventService {
   }
 
   async getEvents(eventInputDto: EventInputDto): Promise<EventOutputDto[]> {
-    const { keywords, dateRange, distances } = eventInputDto;
+    const searchQuery = this.setSearchQuery(eventInputDto);
 
-    let searchQuery = {};
-    searchQuery = this.setKeywordsQuery(searchQuery, keywords);
-    searchQuery = this.setEventDateRangeQuery(searchQuery, dateRange);
-    searchQuery = this.setDistancesQuery(searchQuery, distances);
+    const model = this.eventModel
+      .find(searchQuery)
+      .select(['-_id', '-__v'])
+      .sort({ eventDate: 1 });
 
+    const { offset, limit } = eventInputDto;
+
+    if (offset && limit) {
+      model.skip(offset).limit(limit);
+    }
+
+    return await model.exec();
+  }
+
+  async getEventsCount(eventInputDto: EventInputDto): Promise<number> {
+    const searchQuery = this.setSearchQuery(eventInputDto);
     return await this.eventModel
       .find(searchQuery)
       .select(['-_id', '-__v'])
       .sort({ eventDate: 1 })
+      .count()
       .exec();
   }
 
@@ -109,6 +121,15 @@ export class EventService {
       return this.crawlerEvents(fetchResult.data);
     }
     throw this.logger.error('Error when get events. API Request Error');
+  }
+
+  private setSearchQuery(eventInputDto: EventInputDto): object {
+    const { keywords, dateRange, distances } = eventInputDto;
+    let searchQuery = {};
+    searchQuery = this.setKeywordsQuery(searchQuery, keywords);
+    searchQuery = this.setEventDateRangeQuery(searchQuery, dateRange);
+    searchQuery = this.setDistancesQuery(searchQuery, distances);
+    return searchQuery;
   }
 
   private setKeywordsQuery(

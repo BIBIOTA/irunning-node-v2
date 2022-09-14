@@ -45,12 +45,17 @@ export class EventController {
     @Query() eventInputDto: EventInputDto,
     @Response() res,
   ): Promise<EventResponseDto> {
-    const data = await this.eventService.getEvents(eventInputDto);
-    return res.status(HttpStatus.OK).json({
+    const events = await this.eventService.getEvents(eventInputDto);
+    const totalCount = await this.eventService.getEventsCount(eventInputDto);
+    const responsedata: EventResponseDto = {
       statusCode: 0,
       message: 'ok',
-      data,
-    });
+      data: {
+        events,
+        totalCount,
+      },
+    };
+    return res.status(HttpStatus.OK).json(responsedata);
   }
 
   @Get('/snapshot/html')

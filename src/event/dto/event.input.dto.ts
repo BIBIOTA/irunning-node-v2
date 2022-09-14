@@ -1,5 +1,12 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsEnum, IsOptional, Matches } from 'class-validator';
+import {
+  IsArray,
+  IsEnum,
+  IsNumberString,
+  IsOptional,
+  Matches,
+  ValidateIf,
+} from 'class-validator';
 import { EVENT_DISTANCES_TYPE } from '../enum/event-distances-type.enum';
 
 export class EventInputDto {
@@ -33,4 +40,20 @@ export class EventInputDto {
   @IsArray()
   @IsEnum(EVENT_DISTANCES_TYPE, { each: true })
   distances?: EVENT_DISTANCES_TYPE[];
+  @ApiProperty({
+    required: false,
+    description: '略過筆數(搭配limit使用)',
+    type: Number,
+  })
+  @ValidateIf((o) => o.hasOwnProperty('limit'))
+  @IsNumberString()
+  offset?: number;
+  @ApiProperty({
+    required: false,
+    description: '筆數(搭配offset使用)',
+    type: Number,
+  })
+  @ValidateIf((o) => o.hasOwnProperty('offset'))
+  @IsNumberString()
+  limit?: number;
 }

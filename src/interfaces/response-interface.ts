@@ -1,5 +1,5 @@
 export interface ResponseInterface<T> {
-  status: boolean;
+  statusCode: number;
   data: T;
   message: string;
 }

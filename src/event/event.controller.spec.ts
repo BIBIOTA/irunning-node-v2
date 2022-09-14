@@ -3652,6 +3652,9 @@ describe('EventController', () => {
     getEvents: jest.fn(() => {
       return Promise.resolve([mockData]);
     }),
+    getEventsCount: jest.fn(() => {
+      return Promise.resolve(1);
+    }),
     getHtmlSnapshot: jest.fn(() => {
       return Promise.resolve(html);
     }),
@@ -3686,7 +3689,10 @@ describe('EventController', () => {
     const expectResponse = {
       statusCode: 0,
       message: 'ok',
-      data: [mockData],
+      data: {
+        events: [mockData],
+        totalCount: 1,
+      },
     };
     const request: EventInputDto = {};
     const response = {

@@ -3726,7 +3726,7 @@ describe('EventService', () => {
 
   it('testCrawlerEvents', async () => {
     const result = service.crawlerEvents(html);
-    const expectResult: EventOutputDto[] = mockJsonResponse.data;
+    const expectResult: EventOutputDto[] = mockJsonResponse.data.events;
     expect(result).toEqual(expectResult);
   });
 

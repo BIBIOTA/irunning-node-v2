@@ -2,11 +2,18 @@ import { ApiProperty } from '@nestjs/swagger';
 import { ResponseDto } from '../../dto/response-dto';
 import { EventOutputDto } from './event.output.dto';
 
-export class EventResponseDto extends ResponseDto<[EventOutputDto]> {
-  @ApiProperty()
-  status: boolean;
+export class EventPaginateDataDto {
   @ApiProperty({ type: [EventOutputDto] })
-  data: [EventOutputDto];
+  events: EventOutputDto[];
+  @ApiProperty()
+  totalCount: number;
+}
+
+export class EventResponseDto extends ResponseDto<EventPaginateDataDto> {
+  @ApiProperty()
+  statusCode: number;
+  @ApiProperty({ type: EventPaginateDataDto })
+  data: EventPaginateDataDto;
   @ApiProperty({ example: 'ok' })
   message: string;
 }

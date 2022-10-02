@@ -4,11 +4,13 @@ import {
   IsEnum,
   IsNumberString,
   IsOptional,
+  IsBoolean,
   Matches,
   ValidateIf,
-} from 'class-validator';
+  IsIn,
+} from '@nestjs/class-validator';
 import { EVENT_DISTANCES_TYPE } from '../enum/event-distances-type.enum';
-
+import { Transform } from 'class-transformer';
 export class EventInputDto {
   @ApiProperty({
     required: false,
@@ -40,6 +42,25 @@ export class EventInputDto {
   @IsArray()
   @IsEnum(EVENT_DISTANCES_TYPE, { each: true })
   distances?: EVENT_DISTANCES_TYPE[];
+  @ApiProperty({
+    required: false,
+    description: '目前開放報名的賽事',
+    type: 'true',
+    example: 'true',
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === 'true')
+  @IsIn([true])
+  onlyRegistering: boolean;
+  @ApiProperty({
+    required: false,
+    description: '是否截止報名',
+    type: Boolean,
+  })
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true')
+  entryIsEnd: boolean;
   @ApiProperty({
     required: false,
     description: '略過筆數(搭配limit使用)',

@@ -124,11 +124,14 @@ export class EventService {
   }
 
   private setSearchQuery(eventInputDto: EventInputDto): object {
-    const { keywords, dateRange, distances } = eventInputDto;
+    const { keywords, dateRange, distances, entryIsEnd, onlyRegistering } =
+      eventInputDto;
     let searchQuery = {};
     searchQuery = this.setKeywordsQuery(searchQuery, keywords);
     searchQuery = this.setEventDateRangeQuery(searchQuery, dateRange);
     searchQuery = this.setDistancesQuery(searchQuery, distances);
+    searchQuery = this.setEntryIsEndQuery(searchQuery, entryIsEnd);
+    searchQuery = this.setOnlyRegisteringQuery(searchQuery, onlyRegistering);
     return searchQuery;
   }
 
@@ -193,6 +196,32 @@ export class EventService {
         });
       });
       _.set(searchQuery, '$and', distancesQuery);
+    }
+    return searchQuery;
+  }
+
+  private setEntryIsEndQuery(searchQuery: object, entryIsEnd: boolean | null) {
+    if (entryIsEnd === true) {
+      _.set(searchQuery, 'entryIsEnd', true);
+    }
+    if (entryIsEnd === false) {
+      _.set(searchQuery, 'entryIsEnd', false);
+    }
+    return searchQuery;
+  }
+
+  private setOnlyRegisteringQuery(
+    searchQuery: object,
+    onlyRegistering: boolean | null,
+  ) {
+    const today = moment().format('YYYY-MM-DD');
+    if (onlyRegistering === true) {
+      _.set(searchQuery, 'entryStartDate', {
+        $lte: today,
+      });
+      _.set(searchQuery, 'entryEndDate', {
+        $gte: today,
+      });
     }
     return searchQuery;
   }

@@ -2,6 +2,7 @@ lockfileVersion: 5.4
 
 specifiers:
   '@nestjs/axios': ^0.1.0
+  '@nestjs/class-validator': ^0.13.4
   '@nestjs/cli': ^9.1.2
   '@nestjs/common': ^9.0.11
   '@nestjs/config': ^2.2.0
@@ -49,6 +50,7 @@ specifiers:
 
 dependencies:
   '@nestjs/axios': 0.1.0_3mdbamkp7cmelffjfexsjo7tau
+  '@nestjs/class-validator': 0.13.4
   '@nestjs/common': 9.0.11_allg6cauirbqzgqcmexy2wdnoq
   '@nestjs/config': 2.2.0_3mdbamkp7cmelffjfexsjo7tau
   '@nestjs/core': 9.0.11_psficsz3mqirqwo2ujbfhdr2aa
@@ -845,6 +847,13 @@ packages:
       rxjs: 7.5.6
     transitivePeerDependencies:
       - debug
+    dev: false
+
+  /@nestjs/class-validator/0.13.4:
+    resolution: {integrity: sha512-/mqZL36LJ5uV5WDhi87Cd52IssuO+SStaOr2+6sBsvCCGUWkoJes4Wwzmm3m/gdHH+tsNxX60sVSzYcU6hAy9Q==}
+    dependencies:
+      libphonenumber-js: 1.10.13
+      validator: 13.7.0
     dev: false
 
   /@nestjs/cli/9.1.2:

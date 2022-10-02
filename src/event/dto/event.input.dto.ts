@@ -51,7 +51,7 @@ export class EventInputDto {
   @IsOptional()
   @Transform(({ value }) => value === 'true')
   @IsIn([true])
-  onlyRegistering: boolean;
+  onlyRegistering?: boolean;
   @ApiProperty({
     required: false,
     description: '是否截止報名',
@@ -60,7 +60,7 @@ export class EventInputDto {
   @IsOptional()
   @IsBoolean()
   @Transform(({ value }) => value === 'true')
-  entryIsEnd: boolean;
+  entryIsEnd?: boolean;
   @ApiProperty({
     required: false,
     description: '略過筆數(搭配limit使用)',

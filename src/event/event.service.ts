@@ -229,9 +229,11 @@ export class EventService {
   private transformEvent(td: cheerio.Cheerio, year: string): EventOutputDto {
     const title = this.getTitle(td);
     const [date, time] = this.getDateTime(td);
+    const eventDate = this.getDate(year, date);
     const entry = this.getEntry(td);
     const [entryStartDate, endtryEndDate] = this.getEntryStartAndEnd(
       year,
+      eventDate,
       entry,
     );
     const event = {
@@ -240,7 +242,7 @@ export class EventService {
       eventLink: this.getLink(td),
       eventStatus: this.getEventStatus(td),
       eventCertificate: this.getEventCertificate(td),
-      eventDate: this.getDate(year, date),
+      eventDate: eventDate,
       eventTime: this.getEventTime(time),
       location: this.getLocation(td),
       distances: this.getDistances(td),
@@ -363,6 +365,7 @@ export class EventService {
 
   private getEntryStartAndEnd(
     year: string,
+    date: string,
     entry: string | null,
   ): Array<string | null> {
     if (entry === '已截止') {
@@ -381,6 +384,14 @@ export class EventService {
       }
       if (entryStart > entryEnd) {
         entryEnd = moment(entryEnd).add(1, 'years').format('YYYY-MM-DD');
+      }
+      if (date < entryStart) {
+        entryStart = moment(entryStart)
+          .subtract(1, 'years')
+          .format('YYYY-MM-DD');
+      }
+      if (date < entryEnd) {
+        entryEnd = moment(entryEnd).subtract(1, 'years').format('YYYY-MM-DD');
       }
       return [entryStart, entryEnd];
     }

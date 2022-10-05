@@ -7,7 +7,6 @@ import {
   IsBoolean,
   Matches,
   ValidateIf,
-  IsIn,
 } from '@nestjs/class-validator';
 import { EVENT_DISTANCES_TYPE } from '../enum/event-distances-type.enum';
 import { Transform } from 'class-transformer';
@@ -44,13 +43,11 @@ export class EventInputDto {
   distances?: EVENT_DISTANCES_TYPE[];
   @ApiProperty({
     required: false,
-    description: '目前開放報名的賽事',
-    type: 'true',
-    example: 'true',
+    description: '目前開放報名的賽事(只有true的條件才會查詢)',
+    type: Boolean,
   })
   @IsOptional()
   @Transform(({ value }) => value === 'true')
-  @IsIn([true])
   onlyRegistering?: boolean;
   @ApiProperty({
     required: false,

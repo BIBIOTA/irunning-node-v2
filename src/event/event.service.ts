@@ -54,6 +54,20 @@ export class EventService {
     return result;
   }
 
+  async getEvent(
+    eventName: string,
+    eventDate: string,
+  ): Promise<EventOutputDto | null> {
+    const event = await this.eventModel
+      .findOne({ eventName, eventDate })
+      .select(['-_id', '-__v', '-createdAt', '-updatedAt'])
+      .exec();
+    if (!event) {
+      return null;
+    }
+    return event;
+  }
+
   async getEvents(eventInputDto: EventInputDto): Promise<EventOutputDto[]> {
     const searchQuery = this.setSearchQuery(eventInputDto);
 
@@ -90,10 +104,21 @@ export class EventService {
     const fetchResult = await this.getEventsBodyFromOrg();
     if (fetchResult.status === HttpStatus.OK) {
       try {
-        this.eventModel.deleteMany({}).exec();
         const eventOutputDtos = this.crawlerEvents(fetchResult.data);
-        eventOutputDtos.map((event) => {
-          new this.eventModel(event).save();
+        eventOutputDtos.map(async (event) => {
+          const data = await this.getEvent(event.eventName, event.eventDate);
+          if (data) {
+            if (!this.checkEventNotChanged([data, event])) {
+              await this.eventModel
+                .findOne({
+                  eventName: event.eventName,
+                  eventDate: event.eventDate,
+                })
+                .updateOne({ ...event, updatedAt: new Date() });
+            }
+            return;
+          }
+          new this.eventModel({ ...event, createdAt: new Date() }).save();
         });
         this.logger.log('Update events end');
         return;
@@ -121,6 +146,34 @@ export class EventService {
       return this.crawlerEvents(fetchResult.data);
     }
     throw this.logger.error('Error when get events. API Request Error');
+  }
+
+  private checkEventNotChanged(event: EventOutputDto[]): boolean {
+    const [dbData, newData] = event;
+    const checkDiffrentKeys = [
+      'eventName',
+      'eventInfo',
+      'eventDate',
+      'eventStatus',
+      'eventCertificate',
+      'entryIsEnd',
+      'entryStartDate',
+      'entryEndDate',
+      'location',
+      'eventLink',
+      'eventTime',
+      'agent',
+    ];
+    const diffKeys = [];
+    checkDiffrentKeys.forEach((key) => {
+      if (dbData[key] !== newData[key]) {
+        diffKeys.push(key);
+      }
+    });
+    if (diffKeys.length > 0) {
+      return false;
+    }
+    return true;
   }
 
   private setSearchQuery(eventInputDto: EventInputDto): object {
@@ -165,6 +218,10 @@ export class EventService {
       if (endDate) {
         _.set(searchQuery, 'eventDate.$lte', endDate);
       }
+    } else {
+      _.set(searchQuery, 'eventDate', {
+        $gte: moment().format('YYYY-MM-DD'),
+      });
     }
 
     return searchQuery;

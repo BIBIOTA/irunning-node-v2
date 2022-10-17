@@ -3676,7 +3676,15 @@ describe('EventService', () => {
         }),
       };
     });
-    static findOne = jest.fn().mockResolvedValue(mockData);
+    static findOne = jest.fn().mockImplementation(() => {
+      return {
+        select: jest.fn().mockImplementation(() => {
+          return {
+            exec: jest.fn().mockResolvedValue(mockData),
+          };
+        }),
+      };
+    });
     static findOneAndUpdate = jest.fn().mockResolvedValue(mockData);
     static deleteOne = jest.fn().mockResolvedValue(true);
     static deleteMany = jest.fn().mockImplementation(() => {
@@ -3733,6 +3741,12 @@ describe('EventService', () => {
   it('testGetEvents', async () => {
     const eventInputDto: EventInputDto = {};
     expect(await service.getEvents(eventInputDto)).toEqual([mockData]);
+  });
+
+  it('testGetEvent', async () => {
+    expect(
+      await service.getEvent('2022 臺灣米倉田中馬拉松', '2022-11-13'),
+    ).toEqual(mockData);
   });
 
   it('testUpdateEvents', async () => {

@@ -46,6 +46,12 @@ export class Event {
 
   @Prop()
   entryEndDate: string | null;
+
+  @Prop({ default: Date.now() })
+  createdAt: Date;
+
+  @Prop({ default: null })
+  updatedAt?: Date;
 }
 
 export type EventDocument = Event & Document;

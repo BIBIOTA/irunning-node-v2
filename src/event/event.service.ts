@@ -15,6 +15,7 @@ import { Event, EventDocument } from './event.model';
 import { EVENT_MESSEAGE } from './enum/error-message.enum';
 import { EventInputDto } from './dto/event.input.dto';
 import { EVENT_DISTANCES_TYPE } from './enum/event-distances-type.enum';
+import { SlackService } from 'nestjs-slack';
 @Injectable()
 export class EventService {
   private readonly logger = new Logger(EventService.name);
@@ -22,6 +23,8 @@ export class EventService {
   constructor(
     @InjectModel(Event.name) private eventModel: Model<EventDocument>,
     private readonly httpService: HttpService,
+    // TODO: Add logService
+    private slackService: SlackService,
   ) {}
 
   getEventsBodyFromOrg(): Promise<AxiosResponse> {
@@ -100,7 +103,6 @@ export class EventService {
     timeZone: 'Asia/Taipei',
   })
   async updateEvents(): Promise<void> {
-    this.logger.log('Start update events');
     const fetchResult = await this.getEventsBodyFromOrg();
     if (fetchResult.status === HttpStatus.OK) {
       try {
@@ -120,14 +122,13 @@ export class EventService {
           }
           new this.eventModel({ ...event, createdAt: new Date() }).save();
         });
-        this.logger.log('Update events end');
+        this.sendToSlack(EVENT_MESSEAGE.SUCCESS_UPDATE_EVENT);
         return;
       } catch (error) {
-        this.logger.error(EVENT_MESSEAGE.ERROR_UPDATE_EVENT, error);
-        throw EVENT_MESSEAGE.ERROR_UPDATE_EVENT;
+        this.sendToSlack(EVENT_MESSEAGE.ERROR_UPDATE_EVENT, error);
       }
     }
-    this.logger.error(EVENT_MESSEAGE.ERROR_UPDATE_EVENT_API_REQUEST);
+    this.sendToSlack(EVENT_MESSEAGE.ERROR_UPDATE_EVENT);
     throw EVENT_MESSEAGE.ERROR_UPDATE_EVENT_API_REQUEST;
   }
 
@@ -146,6 +147,11 @@ export class EventService {
       return this.crawlerEvents(fetchResult.data);
     }
     throw this.logger.error('Error when get events. API Request Error');
+  }
+
+  private sendToSlack(message: string, addTime = true): void {
+    const time = addTime ? moment().format('YYYY-MM-DD HH:mm:ss') : null;
+    this.slackService.sendText(message + ' ' + time);
   }
 
   private checkEventNotChanged(event: EventOutputDto[]): boolean {

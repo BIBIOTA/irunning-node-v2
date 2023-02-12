@@ -8,6 +8,9 @@ import { join } from 'path';
 import { EventOutputDto } from './dto/event.output.dto';
 import { EventResponseDto } from './dto/response-output.dto';
 import { EventInputDto } from './dto/event.input.dto';
+import { SlackService } from 'nestjs-slack';
+
+jest.useFakeTimers().setSystemTime(new Date('2022-01-01'));
 
 describe('EventService', () => {
   let service: EventService;
@@ -3709,6 +3712,12 @@ describe('EventService', () => {
                 });
               }),
             },
+          },
+        },
+        {
+          provide: SlackService,
+          useValue: {
+            sendText: jest.fn(),
           },
         },
         {

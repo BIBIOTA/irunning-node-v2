@@ -20,14 +20,17 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
+      - name: Install pnpm
+        run: npm i -g pnpm
+
       - name: Install npm dependencies
-        run: npm ci
+        run: pnpm install
       
       - name: Lint code
-        run: npm run lint
+        run: pnpm lint
       
       - name: Run tests
-        run: npm run test
+        run: pnpm test
   deploy:
     name: Deploy app
     runs-on: ubuntu-latest

@@ -2,15 +2,18 @@ FROM node:16-alpine as builder
 
 ENV NODE_ENV build
 
+RUN npm i -g pnpm
+
 USER node
 WORKDIR /home/node
 
 COPY package*.json ./
-RUN npm ci
+
+RUN pnpm install
 
 COPY --chown=node:node . .
-RUN npm run build \
-    && npm prune --production
+RUN pnpm run build \
+    && pnpm prune --prod
 
 # ---
 

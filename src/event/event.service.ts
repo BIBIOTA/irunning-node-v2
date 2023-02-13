@@ -98,7 +98,7 @@ export class EventService {
       .exec();
   }
 
-  @Cron('* 3,15 * * *', {
+  @Cron('0 3,15 * * *', {
     name: 'update events',
     timeZone: 'Asia/Taipei',
   })

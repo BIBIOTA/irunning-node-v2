@@ -444,9 +444,9 @@ export class EventService {
       }
       if (end) {
         entryEnd = this.formatChineseDateToDate(year, end);
-      }
-      if (entryStart > entryEnd) {
-        entryEnd = moment(entryEnd).add(1, 'years').format('YYYY-MM-DD');
+        if (entryStart && entryStart > entryEnd) {
+          entryEnd = moment(entryEnd).add(1, 'years').format('YYYY-MM-DD');
+        }
       }
       if (date < entryStart) {
         entryStart = moment(entryStart)
@@ -463,12 +463,16 @@ export class EventService {
 
   private formatChineseDateToDate(year: string, dateFormat: string): string {
     const date = moment(
-      dateFormat.match(/^(0?[1-9]|1[0-2])[月](0?[1-9]|[12]\d|30|31)[日]/gi)[0],
-      'M月DD日',
+      year +
+        '年' +
+        dateFormat.match(
+          /^(0?[1-9]|1[0-2])[月](0?[1-9]|[12]\d|28|29|30|31)[日]/gi,
+        )[0],
+      'YYYY年M月DD日',
       'en',
       true,
-    ).format('MM-DD');
-    return year + '-' + date;
+    ).format('YYYY-MM-DD');
+    return date;
   }
 
   private checkEntryIsEnd(entry: string | null): boolean {

@@ -3686,6 +3686,7 @@ describe('EventService', () => {
             exec: jest.fn().mockResolvedValue(mockData),
           };
         }),
+        updateOne: jest.fn().mockResolvedValue(true),
       };
     });
     static findOneAndUpdate = jest.fn().mockResolvedValue(mockData);

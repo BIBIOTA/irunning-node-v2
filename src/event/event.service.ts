@@ -106,23 +106,38 @@ export class EventService {
     const fetchResult = await this.getEventsBodyFromOrg();
     if (fetchResult.status === HttpStatus.OK) {
       try {
+        let updatedCount = 0;
+        let insertCount = 0;
         const eventOutputDtos = this.crawlerEvents(fetchResult.data);
         eventOutputDtos.map(async (event) => {
           const data = await this.getEvent(event.eventName, event.eventDate);
           if (data) {
-            if (!this.checkEventNotChanged([data, event])) {
-              await this.eventModel
-                .findOne({
-                  eventName: event.eventName,
-                  eventDate: event.eventDate,
-                })
-                .updateOne({ ...event, updatedAt: new Date() });
-            }
+            await this.eventModel
+              .findOne({
+                eventName: event.eventName,
+                eventDate: event.eventDate,
+              })
+              .updateOne({ ...event, updatedAt: new Date() });
+            updatedCount++;
             return;
           }
           new this.eventModel({ ...event, createdAt: new Date() }).save();
+          insertCount++;
         });
-        this.sendToSlack(EVENT_MESSEAGE.SUCCESS_UPDATE_EVENT);
+        const removeOutDatedCount = await this.removeOutDatedEvents();
+        const removeNotFoundCount = await this.removeNotFoundEvents(
+          eventOutputDtos,
+        );
+        this.sendToSlack(
+          EVENT_MESSEAGE.SUCCESS_UPDATE_EVENT +
+            '. ' +
+            this.getCountMessege(
+              updatedCount,
+              insertCount,
+              removeOutDatedCount,
+              removeNotFoundCount,
+            ),
+        );
         return;
       } catch (error) {
         this.sendToSlack(EVENT_MESSEAGE.ERROR_UPDATE_EVENT, error);
@@ -130,6 +145,42 @@ export class EventService {
     }
     this.sendToSlack(EVENT_MESSEAGE.ERROR_UPDATE_EVENT);
     throw EVENT_MESSEAGE.ERROR_UPDATE_EVENT_API_REQUEST;
+  }
+
+  async removeOutDatedEvents(): Promise<number> {
+    const result = await this.eventModel
+      .deleteMany({
+        eventDate: {
+          $lt: moment().format('YYYY-MM-DD'),
+        },
+      })
+      .exec();
+    return result.deletedCount;
+  }
+
+  async removeNotFoundEvents(
+    eventOutputDtos: EventOutputDto[],
+  ): Promise<number> {
+    let removeCount = 0;
+    const events = await this.getEvents(new EventInputDto());
+    events.map((event) => {
+      const isExist = eventOutputDtos.find(
+        (eventOutputDto) =>
+          eventOutputDto.eventName === event.eventName &&
+          eventOutputDto.eventDate === event.eventDate,
+      );
+      if (!isExist) {
+        this.eventModel
+          .findOne({
+            eventName: event.eventName,
+            eventDate: event.eventDate,
+          })
+          .deleteOne()
+          .exec();
+        removeCount++;
+      }
+    });
+    return removeCount;
   }
 
   async getHtmlSnapshot(): Promise<any> {
@@ -152,34 +203,6 @@ export class EventService {
   private sendToSlack(message: string, addTime = true): void {
     const time = addTime ? moment().format('YYYY-MM-DD HH:mm:ss') : null;
     this.slackService.sendText(message + ' ' + time);
-  }
-
-  private checkEventNotChanged(event: EventOutputDto[]): boolean {
-    const [dbData, newData] = event;
-    const checkDiffrentKeys = [
-      'eventName',
-      'eventInfo',
-      'eventDate',
-      'eventStatus',
-      'eventCertificate',
-      'entryIsEnd',
-      'entryStartDate',
-      'entryEndDate',
-      'location',
-      'eventLink',
-      'eventTime',
-      'agent',
-    ];
-    const diffKeys = [];
-    checkDiffrentKeys.forEach((key) => {
-      if (dbData[key] !== newData[key]) {
-        diffKeys.push(key);
-      }
-    });
-    if (diffKeys.length > 0) {
-      return false;
-    }
-    return true;
   }
 
   private setSearchQuery(eventInputDto: EventInputDto): object {
@@ -546,5 +569,14 @@ export class EventService {
       }
     });
     return index;
+  }
+
+  private getCountMessege(
+    updatedCount: number,
+    insertCount: number,
+    removeOutDatedCount: number,
+    removeNotFoundCount: number,
+  ): string {
+    return `Updated: ${updatedCount} Insert: ${insertCount} RemoveOutDated: ${removeOutDatedCount} RemoveNotFound: ${removeNotFoundCount}`;
   }
 }

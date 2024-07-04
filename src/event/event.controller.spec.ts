@@ -3694,7 +3694,7 @@ describe('EventController', () => {
         totalCount: 1,
       },
     };
-    const request: EventInputDto = {};
+    const request: EventInputDto = { sortBy: 'eventDate', orderBy: 'asc' };
     const response = {
       json: jest.fn().mockResolvedValue(expectResponse),
       status: jest.fn().mockReturnThis(),

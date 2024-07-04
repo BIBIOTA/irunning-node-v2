@@ -77,7 +77,9 @@ export class EventService {
     const model = this.eventModel
       .find(searchQuery)
       .select(['-_id', '-__v'])
-      .sort({ eventDate: 1 });
+      .sort({
+        [eventInputDto.sortBy]: eventInputDto.orderBy === 'asc' ? 1 : -1,
+      });
 
     const { offset, limit } = eventInputDto;
 
@@ -200,20 +202,72 @@ export class EventService {
     throw this.logger.error('Error when get events. API Request Error');
   }
 
+  @Cron('0 9 * * 1', {
+    name: 'send events message',
+    timeZone: 'Asia/Taipei',
+  })
+  async sendEventsMessage(): Promise<void> {
+    let dto = new EventInputDto();
+    dto.createdAtTimes = [
+      moment().subtract(1, 'weeks').format('YYYY/MM/DD HH:mm:ss'),
+      moment().format('YYYY/MM/DD HH:mm:ss'),
+    ];
+    this.sendEventMessage(dto, '本週新增賽事： \n');
+
+    dto = new EventInputDto();
+    dto.entryStartDates = [
+      moment().format('YYYY-MM-DD'),
+      moment().add(1, 'weeks').format('YYYY-MM-DD'),
+    ];
+    dto.sortBy = 'entryStartDate';
+    dto.orderBy = 'asc';
+    this.sendEventMessage(dto, '本週開報賽事： \n');
+
+    dto = new EventInputDto();
+    dto.entryEndDates = [
+      moment().format('YYYY-MM-DD'),
+      moment().add(1, 'weeks').format('YYYY-MM-DD'),
+    ];
+    dto.sortBy = 'entryEndDate';
+    dto.orderBy = 'asc';
+    this.sendEventMessage(dto, '本週截止報名賽事： \n');
+  }
+
+  private async sendEventMessage(
+    eventInputDto: EventInputDto,
+    title: string,
+  ): Promise<void> {
+    const newEvents = await this.getEvents(eventInputDto);
+    const message = this.formatSlackEventsMessage(title, newEvents);
+    this.sendToSlack(message, false);
+  }
+
   private sendToSlack(message: string, addTime = true): void {
-    const time = addTime ? moment().format('YYYY-MM-DD HH:mm:ss') : null;
-    this.slackService.sendText(message + ' ' + time);
+    message = addTime
+      ? message + '\n' + moment().format('YYYY-MM-DD HH:mm:ss')
+      : message;
+    this.slackService.sendText(message);
   }
 
   private setSearchQuery(eventInputDto: EventInputDto): object {
-    const { keywords, dateRange, distances, entryIsEnd, onlyRegistering } =
-      eventInputDto;
+    const {
+      keywords,
+      dateRange,
+      distances,
+      entryIsEnd,
+      onlyRegistering,
+      createdAtTimes,
+      entryStartDates,
+    } = eventInputDto;
     let searchQuery = {};
     searchQuery = this.setKeywordsQuery(searchQuery, keywords);
     searchQuery = this.setEventDateRangeQuery(searchQuery, dateRange);
     searchQuery = this.setDistancesQuery(searchQuery, distances);
     searchQuery = this.setEntryIsEndQuery(searchQuery, entryIsEnd);
     searchQuery = this.setOnlyRegisteringQuery(searchQuery, onlyRegistering);
+    searchQuery = this.setCreatedAtQuery(searchQuery, createdAtTimes);
+    searchQuery = this.setEntryStartDatesQuery(searchQuery, entryStartDates);
+    searchQuery = this.setEntryEndDatesQuery(searchQuery, eventInputDto);
     return searchQuery;
   }
 
@@ -308,6 +362,56 @@ export class EventService {
       _.set(searchQuery, 'entryEndDate', {
         $gte: today,
       });
+    }
+    return searchQuery;
+  }
+
+  private setCreatedAtQuery(
+    searchQuery: object,
+    createdAtTimes: string[] | null,
+  ) {
+    if (!createdAtTimes || createdAtTimes.length !== 2) {
+      return searchQuery;
+    }
+    const [createdAtStart, createdAtEnd] = createdAtTimes;
+    _.set(searchQuery, 'createdAt', {
+      $gte: new Date(createdAtStart),
+      $lte: new Date(createdAtEnd),
+    });
+    return searchQuery;
+  }
+
+  private setEntryStartDatesQuery(
+    searchQuery: object,
+    eventStartDates: string[] | null,
+  ) {
+    if (!eventStartDates || eventStartDates.length > 2) {
+      return searchQuery;
+    }
+    const [startDate, endDate] = eventStartDates;
+    _.set(searchQuery, 'entryStartDate', {
+      $gte: startDate,
+    });
+    if (endDate) {
+      _.set(searchQuery, 'entryStartDate.$lte', endDate);
+    }
+    return searchQuery;
+  }
+
+  private setEntryEndDatesQuery(
+    searchQuery: object,
+    eventInputDto: EventInputDto,
+  ) {
+    const { entryEndDates } = eventInputDto;
+    if (!entryEndDates || entryEndDates.length > 2) {
+      return searchQuery;
+    }
+    const [startDate, endDate] = entryEndDates;
+    _.set(searchQuery, 'entryEndDate', {
+      $gte: startDate,
+    });
+    if (endDate) {
+      _.set(searchQuery, 'entryEndDate.$lte', endDate);
     }
     return searchQuery;
   }
@@ -578,5 +682,26 @@ export class EventService {
     removeNotFoundCount: number,
   ): string {
     return `Updated: ${updatedCount} Insert: ${insertCount} RemoveOutDated: ${removeOutDatedCount} RemoveNotFound: ${removeNotFoundCount}`;
+  }
+
+  private formatSlackEventsMessage(
+    message: string,
+    eventOutputDtos: EventOutputDto[],
+  ): string {
+    eventOutputDtos.forEach((event) => {
+      message += `${event.eventName} \n    活動日期: ${event.eventDate}\n`;
+      if (event.entryStartDate) {
+        message += `    報名開始日期: ${event.entryStartDate} \n`;
+      }
+      if (event.entryEndDate) {
+        message += `    報名截止日期: ${event.entryEndDate} \n`;
+      }
+
+      if (event.eventLink) {
+        message += `    報名網址: ${event.eventLink}`;
+      }
+      message += '\n';
+    });
+    return message;
   }
 }

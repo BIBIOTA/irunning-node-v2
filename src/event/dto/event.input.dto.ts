@@ -74,4 +74,65 @@ export class EventInputDto {
   @ValidateIf((o) => o.hasOwnProperty('offset'))
   @IsNumberString()
   limit?: number;
+
+  @ApiProperty({
+    required: false,
+    description:
+      '查詢特定賽事建立時間範圍。 ISO 8601 格式 ex: ["2024/01/01 00:00:00", "2024/01/02 23:59:59"]',
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @Matches(/^\d{4}\/\d{2}\/\d{2} \d{2}:\d{2}:\d{2}$/i, {
+    each: true,
+    message: 'createdAtTimes must be formatted as yyyy/mm/dd hh:mm:ss',
+  })
+  createdAtTimes?: string[];
+
+  @ApiProperty({
+    required: false,
+    description:
+      "查詢特定報名開始時間範圍。 格式 ex: ['2024-01-01'] (該日期及該日期以後開始報名的賽事) or ['2024-01-01', '2024-01-02'] (該日期範圍開始報名的賽事)",
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @Matches(/^\d{4}(-)(((0)[0-9])|((1)[0-2]))(-)([0-2][0-9]|(3)[0-1])$/i, {
+    each: true,
+    message: 'entryStartDates must be formatted as yyyy-mm-dd',
+  })
+  entryStartDates?: string[];
+
+  @ApiProperty({
+    required: false,
+    description:
+      "查詢特定報名截止時間範圍。 格式 ex: ['2024-01-01'] (該日期及該日期以後截止報名的賽事) or ['2024-01-01', '2024-01-02'] (該日期範圍截止報名的賽事)",
+    type: [String],
+  })
+  @IsOptional()
+  @IsArray()
+  @Matches(/^\d{4}(-)(((0)[0-9])|((1)[0-2]))(-)([0-2][0-9]|(3)[0-1])$/i, {
+    each: true,
+    message: 'entryEndDates must be formatted as yyyy-mm-dd',
+  })
+  entryEndDates?: string[];
+
+  @ApiProperty({
+    required: false,
+    description:
+      '排序欄位(僅支援eventDate, entryStartDate, entryEndDate)。預設為eventDate',
+    type: String,
+  })
+  @IsOptional()
+  @IsEnum(['eventDate', 'entryStartDate', 'entryEndDate'])
+  sortBy = 'eventDate';
+
+  @ApiProperty({
+    required: false,
+    description: '排序方式(asc, desc)。預設為asc',
+    type: String,
+  })
+  @IsOptional()
+  @IsEnum(['asc', 'desc'])
+  orderBy = 'asc';
 }

@@ -10,6 +10,10 @@ import { EventResponseDto } from './dto/response-output.dto';
 import { EventInputDto } from './dto/event.input.dto';
 import { SlackService } from 'nestjs-slack';
 
+Object.defineProperty(global, 'performance', {
+  writable: true,
+});
+
 jest.useFakeTimers().setSystemTime(new Date('2022-01-01'));
 
 describe('EventService', () => {
@@ -3749,7 +3753,10 @@ describe('EventService', () => {
   });
 
   it('testGetEvents', async () => {
-    const eventInputDto: EventInputDto = {};
+    const eventInputDto: EventInputDto = {
+      sortBy: 'eventDate',
+      orderBy: 'asc',
+    };
     expect(await service.getEvents(eventInputDto)).toEqual([mockData]);
   });
 

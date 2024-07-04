@@ -2,7 +2,7 @@ FROM node:16-alpine as builder
 
 ENV NODE_ENV build
 
-RUN npm i -g pnpm
+RUN npm i -g pnpm @pnpm/exe
 
 USER node
 WORKDIR /home/node

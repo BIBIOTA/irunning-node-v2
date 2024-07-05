@@ -96,8 +96,8 @@ export class EventService {
       .find(searchQuery)
       .select(['-_id', '-__v'])
       .sort({ eventDate: 1 })
-      .count()
-      .exec();
+      .exec()
+      .then((result) => result.length);
   }
 
   @Cron('0 3,15 * * *', {
@@ -127,9 +127,8 @@ export class EventService {
           insertCount++;
         });
         const removeOutDatedCount = await this.removeOutDatedEvents();
-        const removeNotFoundCount = await this.removeNotFoundEvents(
-          eventOutputDtos,
-        );
+        const removeNotFoundCount =
+          await this.removeNotFoundEvents(eventOutputDtos);
         this.sendToSlack(
           EVENT_MESSEAGE.SUCCESS_UPDATE_EVENT +
             '. ' +

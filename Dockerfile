@@ -1,8 +1,8 @@
-FROM node:16-alpine as builder
+FROM node:18-alpine as builder
 
 ENV NODE_ENV build
 
-RUN npm i -g pnpm @pnpm/exe
+RUN npm i -g pnpm
 
 USER node
 WORKDIR /home/node
@@ -17,7 +17,7 @@ RUN pnpm run build \
 
 # ---
 
-FROM node:16-alpine
+FROM node:18-alpine
 
 ENV NODE_ENV production
 

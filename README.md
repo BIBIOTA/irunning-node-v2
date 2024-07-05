@@ -1,9 +1,9 @@
 ### [🏃🏻 TW-MARATHON-API](https://marathontw.bibiota.com/events)
 
-![@nestjs/cli](https://img.shields.io/badge/%40nestjs%2Fcli-%5E9.1.2-blue)
-![typescript](https://img.shields.io/badge/typescript-%5E4.8.3-blue)
+![@nestjs/cli](https://img.shields.io/badge/%40nestjs%2Fcli-%5E10.4.2-blue)
+![typescript](https://img.shields.io/badge/typescript-%5E5.5.3-blue)
 ![cheerio](https://img.shields.io/badge/cheerio-1.0.0--rc.12-blue)
-![mongoose](https://img.shields.io/badge/mongoose-%5E6.6.0-blue)
+![mongoose](https://img.shields.io/badge/mongoose-%5E10.0.6-blue)
 
 #### About this repository:
 

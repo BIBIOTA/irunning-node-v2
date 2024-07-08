@@ -207,20 +207,13 @@ export class EventService {
   })
   async sendEventsMessage(): Promise<void> {
     let dto = new EventInputDto();
-    dto.createdAtTimes = [
-      moment().subtract(1, 'weeks').format('YYYY/MM/DD HH:mm:ss'),
-      moment().format('YYYY/MM/DD HH:mm:ss'),
-    ];
-    this.sendEventMessage(dto, '本週新增賽事： \n');
-
-    dto = new EventInputDto();
     dto.entryStartDates = [
       moment().format('YYYY-MM-DD'),
       moment().add(1, 'weeks').format('YYYY-MM-DD'),
     ];
     dto.sortBy = 'entryStartDate';
     dto.orderBy = 'asc';
-    this.sendEventMessage(dto, '本週開報賽事： \n');
+    this.sendEventMessage(dto, '[本週開報賽事]： \n');
 
     dto = new EventInputDto();
     dto.entryEndDates = [
@@ -229,7 +222,14 @@ export class EventService {
     ];
     dto.sortBy = 'entryEndDate';
     dto.orderBy = 'asc';
-    this.sendEventMessage(dto, '本週截止報名賽事： \n');
+    this.sendEventMessage(dto, '[本週截止報名賽事]： \n');
+
+    dto = new EventInputDto();
+    dto.createdAtTimes = [
+      moment().subtract(1, 'weeks').format('YYYY/MM/DD HH:mm:ss'),
+      moment().format('YYYY/MM/DD HH:mm:ss'),
+    ];
+    this.sendEventMessage(dto, '[本週新增賽事]： \n');
   }
 
   private async sendEventMessage(
